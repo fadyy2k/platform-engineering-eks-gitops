@@ -23,7 +23,7 @@ gh variable set AWS_TERRAFORM_PLAN_ROLE_ARN --repo "$repo" --body "$plan_role"
 gh variable set AWS_TERRAFORM_APPLY_ROLE_ARN --repo "$repo" --body "$apply_role"
 
 for env_name in dev staging prod; do
-  printf '%s' '{"wait_timer":0,"prevent_self_review":false,"deployment_branch_policy":{"protected_branches":true,"custom_branch_policies":false}}' | \
+  printf '%s' '{"wait_timer":0,"deployment_branch_policy":{"protected_branches":true,"custom_branch_policies":false}}' | \
     gh api --method PUT "repos/$repo/environments/$env_name" --input - >/dev/null
   echo "configured GitHub Environment: $env_name"
 done
