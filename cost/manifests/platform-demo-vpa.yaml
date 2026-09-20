@@ -1,0 +1,21 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: platform-demo
+  namespace: platform-demo
+  labels:
+    app.kubernetes.io/name: platform-demo
+    app.kubernetes.io/part-of: platform-engineering-lab
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: platform-demo
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: platform-demo
+        controlledResources:
+          - cpu
+          - memory

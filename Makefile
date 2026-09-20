@@ -2,7 +2,7 @@ TF_ENV ?= dev
 BACKEND_FILE := environments/$(TF_ENV).backend.hcl
 VAR_FILE := environments/$(TF_ENV).tfvars.example
 
-.PHONY: fmt validate bootstrap-init bootstrap-plan bootstrap-apply backend init plan apply k8s-check demo-test reliability-test game-day backup-restore-smoke policy-test
+.PHONY: fmt validate bootstrap-init bootstrap-plan bootstrap-apply backend init plan apply k8s-check demo-test reliability-test game-day backup-restore-smoke policy-test operations-test
 
 fmt:
 	terraform fmt -recursive infra bootstrap
@@ -55,3 +55,8 @@ game-day:
 
 backup-restore-smoke:
 	./scripts/backup-restore-smoke.sh
+
+operations-test:
+	docker run --rm -v "$$(pwd):/work" mikefarah/yq:4.53.6 '{"groups": .spec.groups}' /work/cost/manifests/opencost-budget-rule.yaml > /tmp/opencost-budget.rules.yaml
+	docker run --rm --entrypoint /bin/promtool -v /tmp:/rules prom/prometheus:v3.14.0 check rules /rules/opencost-budget.rules.yaml
+	docker run --rm --entrypoint /bin/promtool -v /tmp:/rules -v "$$(pwd):/work" -w /work/cost/tests prom/prometheus:v3.14.0 test rules opencost-budget-rule-test.yaml

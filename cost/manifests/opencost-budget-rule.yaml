@@ -1,0 +1,24 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: opencost-budget
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: platform-engineering-lab
+spec:
+  groups:
+    - name: platform.cost
+      interval: 5m
+      rules:
+        - record: platform:estimated_monthly_node_cost_usd
+          expr: sum(node_total_hourly_cost) * 730
+        - alert: PlatformMonthlyRunRateHigh
+          expr: platform:estimated_monthly_node_cost_usd > 150
+          for: 30m
+          labels:
+            severity: warning
+            category: cost
+          annotations:
+            summary: Estimated monthly node run-rate is above the lab budget threshold
+            description: OpenCost estimates the current node run-rate above USD 150/month. Review workload requests, idle capacity and node sizing before increasing the threshold.
+            runbook_url: https://github.com/fadyy2k/platform-engineering-eks-gitops/blob/main/docs/COST_OPERATIONS.md#platformmonthlyrunratehigh
