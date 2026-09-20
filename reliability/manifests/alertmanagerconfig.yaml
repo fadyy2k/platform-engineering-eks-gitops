@@ -1,0 +1,29 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: platform-routing
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: platform-engineering-lab
+spec:
+  route:
+    receiver: default
+    groupBy: ["alertname", "namespace", "severity"]
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    routes:
+      - receiver: critical
+        matchers:
+          - name: severity
+            value: critical
+            matchType: =
+        repeatInterval: 1h
+      - receiver: default
+        matchers:
+          - name: severity
+            value: warning
+            matchType: =
+  receivers:
+    - name: default
+    - name: critical

@@ -1,0 +1,105 @@
+name: Reliability CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "demo-app/**"
+      - "observability/**"
+      - "reliability/**"
+      - "platform/argocd/**"
+      - "scripts/game-day.sh"
+      - "scripts/backup-restore-smoke.sh"
+      - ".github/workflows/reliability.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "demo-app/**"
+      - "observability/**"
+      - "reliability/**"
+      - "platform/argocd/**"
+      - "scripts/game-day.sh"
+      - "scripts/backup-restore-smoke.sh"
+      - ".github/workflows/reliability.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  app-metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Setup Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version: "1.26.x"
+          cache: false
+      - name: Unit test metrics and failure mode
+        working-directory: demo-app
+        run: go test ./...
+      - name: Vet
+        working-directory: demo-app
+        run: go vet ./...
+
+  prometheus-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Extract PrometheusRule groups
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            mikefarah/yq:4.53.6 \
+            '{"groups": .spec.groups}' \
+            /work/reliability/manifests/platform-demo-rules.yaml \
+            > /tmp/platform-demo.rules.yaml
+      - name: Check rule syntax
+        run: |
+          docker run --rm \
+            --entrypoint /bin/promtool \
+            -v /tmp:/rules \
+            prom/prometheus:v3.14.0 \
+            check rules /rules/platform-demo.rules.yaml
+      - name: Test SLO burn alerts
+        run: |
+          docker run --rm \
+            --entrypoint /bin/promtool \
+            -v /tmp:/rules \
+            -v "$PWD:/work" \
+            -w /work/reliability/tests \
+            prom/prometheus:v3.14.0 \
+            test rules platform-demo-rules-test.yaml
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Validate owned manifests
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            ghcr.io/yannh/kubeconform:v0.8.0 \
+            -strict -summary -ignore-missing-schemas \
+            apps platform reliability/manifests
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Shellcheck recovery and game-day tooling
+        run: |
+          docker run --rm \
+            --entrypoint shellcheck \
+            -v "$PWD:/mnt" \
+            -w /mnt \
+            koalaman/shellcheck-alpine:stable \
+            scripts/game-day.sh scripts/backup-restore-smoke.sh
