@@ -81,7 +81,7 @@ The script configures these GitHub repository variables:
 - `AWS_TERRAFORM_PLAN_ROLE_ARN`
 - `AWS_TERRAFORM_APPLY_ROLE_ARN`
 
-It also creates `dev`, `staging`, and `prod` GitHub Environments restricted to protected branches.
+It also creates `dev`, `staging`, and `prod` GitHub Environments restricted to protected branches. Required reviewers are intentionally not invented by automation; add them in GitHub Environment protection settings when your team approval model is defined.
 
 ## 5. CI behavior after activation
 
