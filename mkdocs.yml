@@ -1,0 +1,86 @@
+site_name: Platform Engineering — AWS EKS GitOps
+site_description: Production-style AWS EKS platform reference covering identity, supply chain, policy, reliability, cost and DR patterns.
+site_url: https://fadyy2k.github.io/platform-engineering-eks-gitops/
+repo_url: https://github.com/fadyy2k/platform-engineering-eks-gitops
+repo_name: fadyy2k/platform-engineering-eks-gitops
+edit_uri: edit/main/docs/
+
+nav:
+  - Overview: index.md
+  - Architecture: architecture.md
+  - Bootstrap & Identity:
+      - Bootstrap: BOOTSTRAP.md
+      - IAM / OIDC: IAM.md
+      - Environments: ENVIRONMENTS.md
+      - State Recovery: STATE_RECOVERY.md
+  - Delivery & Security:
+      - Supply Chain: SUPPLY_CHAIN.md
+      - Runtime Security: RUNTIME_SECURITY.md
+  - Reliability:
+      - SLOs & Failure Testing: RELIABILITY.md
+      - Runbooks: RUNBOOKS.md
+  - Cost & Operations: COST_OPERATIONS.md
+  - Decisions:
+      - Node Autoscaling: adr/001-node-autoscaling.md
+      - Multi-region DR: adr/002-multi-region-dr.md
+  - Roadmap: ROADMAP.md
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+    - search.highlight
+    - search.suggest
+  palette:
+    - scheme: slate
+      primary: black
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: black
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/fadyy2k
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/fady-mounir-601331b6/
