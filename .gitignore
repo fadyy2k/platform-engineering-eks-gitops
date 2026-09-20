@@ -1,0 +1,13 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl.backup
+.env
+.env.*
+!.env.example
+kubeconfig*
+*.pem
+*.key
+.DS_Store
