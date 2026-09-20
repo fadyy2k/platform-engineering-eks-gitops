@@ -1,10 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: podinfo
+  name: platform-demo
   namespace: platform-demo
   labels:
-    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/name: platform-demo
+    app.kubernetes.io/part-of: platform-engineering-lab
 spec:
   replicas: 2
   strategy:
@@ -13,23 +14,24 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app.kubernetes.io/name: podinfo
+      app.kubernetes.io/name: platform-demo
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: podinfo
+        app.kubernetes.io/name: platform-demo
+        app.kubernetes.io/part-of: platform-engineering-lab
     spec:
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: podinfo
-          image: ghcr.io/stefanprodan/podinfo:6.7.1
+        - name: platform-demo
+          image: ghcr.io/fadyy2k/platform-demo@sha256:6cbe1af141d721d020ceda70c7df7cd92cad54ecac2682855ebb4ba709b1b005
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: 9898
+              containerPort: 8080
           readinessProbe:
             httpGet:
               path: /readyz

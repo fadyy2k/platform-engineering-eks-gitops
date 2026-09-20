@@ -1,14 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: podinfo
+  name: platform-demo
   namespace: platform-demo
   labels:
-    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/name: platform-demo
+    app.kubernetes.io/part-of: platform-engineering-lab
 spec:
   type: ClusterIP
   selector:
-    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/name: platform-demo
   ports:
     - name: http
       port: 80
