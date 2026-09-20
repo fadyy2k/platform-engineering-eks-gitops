@@ -1,0 +1,84 @@
+name: Policy and Runtime Security CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "security/**"
+      - "platform/argocd/**"
+      - ".github/workflows/policy.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "security/**"
+      - "platform/argocd/**"
+      - ".github/workflows/policy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  policy-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Kyverno CLI
+        uses: kyverno/action-install-cli@v0.2.0
+        with:
+          release: v1.19.1
+
+      - name: Test immutable image policy
+        run: kyverno test security/kyverno/tests/digest --require-tests
+
+      - name: Verify signed image admission policy
+        run: kyverno test security/kyverno/tests/signature --registry --require-tests
+
+  helm-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v5.0.1
+        with:
+          version: v3.19.0
+
+      - name: Add security chart repositories
+        run: |
+          helm repo add kyverno https://kyverno.github.io/kyverno/
+          helm repo add aqua https://aquasecurity.github.io/helm-charts/
+          helm repo add falcosecurity https://falcosecurity.github.io/charts
+          helm repo update
+
+      - name: Render pinned security charts
+        run: |
+          mkdir -p /tmp/rendered
+          helm template kyverno kyverno/kyverno \
+            --namespace kyverno \
+            --version 3.9.1 \
+            -f security/kyverno/values.yaml > /tmp/rendered/kyverno.yaml
+          helm template trivy-operator aqua/trivy-operator \
+            --namespace trivy-system \
+            --version 0.36.0 \
+            -f security/trivy-operator/values.yaml > /tmp/rendered/trivy-operator.yaml
+          helm template falco falcosecurity/falco \
+            --namespace falco \
+            --version 9.1.0 \
+            -f security/falco/values.yaml > /tmp/rendered/falco.yaml
+          test -s /tmp/rendered/kyverno.yaml
+          test -s /tmp/rendered/trivy-operator.yaml
+          test -s /tmp/rendered/falco.yaml
+
+      - name: Validate owned Kubernetes manifests
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            ghcr.io/yannh/kubeconform:v0.6.7 \
+            -strict -summary -ignore-missing-schemas apps platform security/kyverno/policies

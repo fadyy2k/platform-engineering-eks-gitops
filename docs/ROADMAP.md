@@ -23,11 +23,11 @@ The repository starts as a safe, reproducible platform baseline and grows by add
 
 ## Phase 3 — Policy and Runtime Security
 
-- [ ] Kyverno or Gatekeeper policy-as-code
-- [ ] NetworkPolicy baseline
-- [ ] Trivy Operator or equivalent continuous workload scanning
-- [ ] Falco runtime detections
-- [ ] Pod Security Admission namespace policy
+- [x] Kyverno policy-as-code with modern ValidatingPolicy/ImageValidatingPolicy APIs
+- [x] Default-deny NetworkPolicy baseline with explicit DNS and same-namespace app traffic
+- [x] Trivy Operator continuous vulnerability/config/RBAC/compliance scanning
+- [x] Falco runtime detections using modern eBPF with least-privileged mode
+- [x] Pod Security Admission restricted namespace policy
 
 ## Phase 4 — Reliability
 

@@ -1,0 +1,42 @@
+# Kyverno chart 3.9.1 / app v1.19.1
+# Admission is scaled to two replicas so policy enforcement is not tied to one pod.
+admissionController:
+  replicas: 2
+  container:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+backgroundController:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+cleanupController:
+  replicas: 1
+
+reportsController:
+  replicas: 1
+
+features:
+  backgroundScan:
+    enabled: true
+    backgroundScanWorkers: 2
+    backgroundScanInterval: 1h
+  reporting:
+    validate: true
+    mutate: true
+    mutateExisting: true
+    imageVerify: true
+    generate: true
+  policyExceptions:
+    enabled: false

@@ -1,0 +1,21 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: platform-demo-image-policy
+policies:
+  - ../../policies/require-image-digest.yaml
+resources:
+  - resources.yaml
+results:
+  - isValidatingPolicy: true
+    kind: Pod
+    policy: validate-platform-demo-images
+    resources:
+      - signed-digest-good
+    result: pass
+  - isValidatingPolicy: true
+    kind: Pod
+    policy: validate-platform-demo-images
+    resources:
+      - mutable-tag-bad
+    result: fail

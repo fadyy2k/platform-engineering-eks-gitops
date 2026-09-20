@@ -1,0 +1,56 @@
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: validate-platform-demo-images
+  annotations:
+    policies.kyverno.io/title: Validate Platform Demo Images
+    policies.kyverno.io/category: Software Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Platform demo workloads may only run the project-owned image and must pin it by immutable SHA-256 digest.
+spec:
+  validationActions:
+    - Deny
+  evaluation:
+    background:
+      enabled: true
+  autogen:
+    podControllers:
+      controllers:
+        - Deployment
+        - StatefulSet
+        - DaemonSet
+        - Job
+        - CronJob
+        - ReplicaSet
+        - ReplicationController
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: platform-demo
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+      - apiGroups: ["batch"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["jobs", "cronjobs"]
+  variables:
+    - name: allContainers
+      expression: >-
+        has(object.spec.containers)
+        ? object.spec.containers + object.spec.?initContainers.orValue([]) + object.spec.?ephemeralContainers.orValue([])
+        : object.spec.template.spec.containers + object.spec.template.spec.?initContainers.orValue([]) + object.spec.template.spec.?ephemeralContainers.orValue([])
+  validations:
+    - expression: >-
+        variables.allContainers.all(container,
+          container.image.matches('^ghcr\\.io/fadyy2k/platform-demo@sha256:[a-f0-9]{64}$'))
+      message: >-
+        All platform-demo containers must use ghcr.io/fadyy2k/platform-demo pinned by a full SHA-256 digest.
