@@ -1,0 +1,98 @@
+name: Cost and Operations CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cost/**"
+      - "infra/**"
+      - "platform/argocd/opencost-application.yaml"
+      - "platform/argocd/vpa-application.yaml"
+      - "platform/argocd/cost-controls-application.yaml"
+      - "scripts/right-size-report.sh"
+      - ".github/workflows/operations.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "cost/**"
+      - "infra/**"
+      - "platform/argocd/opencost-application.yaml"
+      - "platform/argocd/vpa-application.yaml"
+      - "platform/argocd/cost-controls-application.yaml"
+      - "scripts/right-size-report.sh"
+      - ".github/workflows/operations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  charts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Render OpenCost
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work alpine/helm:3.19.0 \
+            template opencost opencost \
+            --repo https://opencost.github.io/opencost-helm-chart \
+            --version 2.5.31 \
+            --namespace opencost \
+            -f cost/opencost-values.yaml > /tmp/opencost.yaml
+          test -s /tmp/opencost.yaml
+      - name: Render VPA recommender-only chart
+        run: |
+          docker run --rm alpine/helm:3.19.0 \
+            template vpa vertical-pod-autoscaler \
+            --repo https://kubernetes.github.io/autoscaler \
+            --version 0.12.0 \
+            --namespace kube-system \
+            --set admissionController.enabled=false \
+            --set updater.enabled=false \
+            --set recommender.enabled=true \
+            --set crds.enabled=true > /tmp/vpa.yaml
+          test -s /tmp/vpa.yaml
+
+  cost-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Extract cost rules
+        run: |
+          docker run --rm -v "$PWD:/work" mikefarah/yq:4.53.6 \
+            '{"groups": .spec.groups}' \
+            /work/cost/manifests/opencost-budget-rule.yaml \
+            > /tmp/opencost-budget.rules.yaml
+      - name: Validate and test cost rules
+        run: |
+          docker run --rm --entrypoint /bin/promtool \
+            -v /tmp:/rules prom/prometheus:v3.14.0 \
+            check rules /rules/opencost-budget.rules.yaml
+          docker run --rm --entrypoint /bin/promtool \
+            -v /tmp:/rules -v "$PWD:/work" \
+            -w /work/cost/tests prom/prometheus:v3.14.0 \
+            test rules opencost-budget-rule-test.yaml
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Validate cost manifests
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work \
+            ghcr.io/yannh/kubeconform:v0.8.0 \
+            -strict -summary -ignore-missing-schemas cost/manifests platform/argocd
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Shellcheck right-sizing report
+        run: |
+          docker run --rm --entrypoint shellcheck \
+            -v "$PWD:/mnt" -w /mnt koalaman/shellcheck-alpine:stable \
+            scripts/right-size-report.sh

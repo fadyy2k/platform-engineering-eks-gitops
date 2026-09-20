@@ -1,19 +1,19 @@
 output "cluster_name" {
   description = "EKS cluster name."
-  value       = module.eks.cluster_name
+  value       = module.platform.cluster_name
 }
 
 output "cluster_endpoint" {
   description = "EKS API endpoint."
-  value       = module.eks.cluster_endpoint
+  value       = module.platform.cluster_endpoint
 }
 
 output "vpc_id" {
   description = "VPC ID."
-  value       = module.vpc.vpc_id
+  value       = module.platform.vpc_id
 }
 
 output "private_subnet_ids" {
   description = "Private subnet IDs used by EKS."
-  value       = module.vpc.private_subnets
+  value       = module.platform.private_subnet_ids
 }

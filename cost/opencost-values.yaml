@@ -1,0 +1,20 @@
+opencost:
+  exporter:
+    defaultClusterId: platform-lab
+  prometheus:
+    external:
+      enabled: false
+    internal:
+      enabled: true
+      serviceName: monitoring-kube-prometheus-prometheus
+      namespaceName: monitoring
+      port: 9090
+      scheme: http
+  ui:
+    enabled: true
+  metrics:
+    serviceMonitor:
+      enabled: true
+
+service:
+  type: ClusterIP

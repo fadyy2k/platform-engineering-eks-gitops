@@ -39,7 +39,7 @@ The repository starts as a safe, reproducible platform baseline and grows by add
 
 ## Phase 5 — Cost and Multi-environment Operations
 
-- [ ] Cost visibility and budget alerts
-- [ ] Right-sizing recommendations
-- [ ] Reusable environment modules
-- [ ] Optional multi-region disaster-recovery pattern
+- [x] OpenCost visibility + tested monthly run-rate budget alert
+- [x] VPA recommender-only right-sizing recommendations
+- [x] Reusable Terraform platform module with environment-specific roots/state
+- [x] Optional active/passive multi-region disaster-recovery pattern documented with activation criteria

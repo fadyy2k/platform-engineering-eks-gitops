@@ -1,0 +1,34 @@
+rule_files:
+  - /rules/opencost-budget.rules.yaml
+
+evaluation_interval: 5m
+
+tests:
+  - interval: 5m
+    input_series:
+      - series: 'node_total_hourly_cost{node="node-a"}'
+        values: '0.12x24'
+      - series: 'node_total_hourly_cost{node="node-b"}'
+        values: '0.12x24'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: PlatformMonthlyRunRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              category: cost
+            exp_annotations:
+              summary: Estimated monthly node run-rate is above the lab budget threshold
+              description: OpenCost estimates the current node run-rate above USD 150/month. Review workload requests, idle capacity and node sizing before increasing the threshold.
+              runbook_url: https://github.com/fadyy2k/platform-engineering-eks-gitops/blob/main/docs/COST_OPERATIONS.md#platformmonthlyrunratehigh
+
+  - interval: 5m
+    input_series:
+      - series: 'node_total_hourly_cost{node="node-a"}'
+        values: '0.05x24'
+      - series: 'node_total_hourly_cost{node="node-b"}'
+        values: '0.05x24'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: PlatformMonthlyRunRateHigh
+        exp_alerts: []

@@ -6,6 +6,7 @@
 [![Image Supply Chain](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/image.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/image.yml)
 [![Policy & Runtime Security](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/policy.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/policy.yml)
 [![Reliability CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/reliability.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/reliability.yml)
+[![Cost & Operations CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/operations.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/operations.yml)
 
 A platform-engineering reference implementation for **AWS EKS, Terraform, GitHub OIDC, GitOps, supply-chain security, admission policy, runtime detection, observability, SLOs, and reliability engineering**.
 
@@ -91,6 +92,7 @@ flowchart LR
 ├── platform/storage/              # Encrypted gp3 StorageClass
 ├── observability/                 # kube-prometheus-stack values
 ├── reliability/                   # SLO rules, HPA/PDB, alert routing and tests
+├── cost/                          # OpenCost values, budget alerts and VPA recommendations
 ├── security/                      # Kyverno, Trivy Operator and Falco policy/config
 ├── scripts/                       # Bootstrap, recovery and game-day helpers
 ├── docs/                          # Architecture, security, reliability and runbooks
@@ -146,6 +148,21 @@ Phase 4 adds operational evidence and failure handling rather than another layer
 
 The repo distinguishes what CI can prove from what still requires a real cluster. See [Reliability Engineering](docs/RELIABILITY.md), [Runbooks](docs/RUNBOOKS.md), and [ADR-001](docs/adr/001-node-autoscaling.md).
 
+## Phase 5: Cost and Multi-Environment Operations
+
+Phase 5 adds operational economics and reuse without enabling automatic cost-driven mutations:
+
+- **OpenCost** connected to the in-cluster Prometheus stack
+- a tested monthly node run-rate recording rule and **USD 150 lab budget warning**
+- **VPA recommender-only** mode (`updateMode: Off`) for CPU/memory right-sizing evidence
+- a read-only right-sizing report helper
+- the VPC/EKS implementation extracted into a reusable `infra/modules/platform` Terraform module
+- environment-specific roots continue to use independent state keys and tfvars
+- an active/passive **multi-region DR ADR** with explicit activation criteria instead of automatically provisioning a second region
+- dedicated Cost & Operations CI for chart rendering, cost-rule tests, manifest checks and tooling lint
+
+See [Cost Operations](docs/COST_OPERATIONS.md) and [ADR-002](docs/adr/002-multi-region-dr.md).
+
 ## Quick Start — Local Validation Only
 
 These commands do **not** create AWS resources:
@@ -157,6 +174,7 @@ make k8s-check
 make demo-test
 make policy-test
 make reliability-test
+make operations-test
 ```
 
 ## Activate Remote State + OIDC
@@ -241,6 +259,9 @@ kubectl apply -f platform/argocd/falco-application.yaml
 kubectl apply -f platform/argocd/security-policies-application.yaml
 kubectl apply -f platform/argocd/platform-demo-application.yaml
 kubectl apply -f platform/argocd/reliability-application.yaml
+kubectl apply -f platform/argocd/vpa-application.yaml
+kubectl apply -f platform/argocd/opencost-application.yaml
+kubectl apply -f platform/argocd/cost-controls-application.yaml
 ```
 
 Argo CD then reconciles monitoring, policy, workload and reliability desired state from Git. Grafana credentials remain an external Kubernetes Secret and are not committed.
@@ -277,15 +298,21 @@ Argo CD then reconciles monitoring, policy, workload and reliability desired sta
 - dry-run-by-default game-day tooling
 - Velero backup/restore smoke-test harness
 - reliability runbooks and node-autoscaling ADR
+- OpenCost cost visibility and tested monthly run-rate budget alert
+- VPA recommendation-only right-sizing evidence
+- reusable Terraform platform module
+- active/passive multi-region DR architecture decision
 
-## Deliberate Gaps / Next Phase
+## Deliberate Gaps / Activation Work
 
-Phase 5 focuses on **cost and multi-environment operations**:
+The reference implementation is now feature-complete through Phase 5, but live operational evidence still requires an explicitly provisioned environment. Remaining activation work includes:
 
-- cost visibility and budget alerts
-- right-sizing recommendations based on measured demand
-- reusable environment modules
-- optional multi-region disaster-recovery pattern
+- bootstrap/apply AWS resources in an approved account
+- execute real OIDC-backed Terraform plans and environment promotions
+- exercise Alertmanager delivery to an organization-approved receiver
+- run backup/restore and game-day tests on a live non-production cluster
+- collect real OpenCost/VPA data before changing requests, limits, node shapes or budgets
+- validate a second region only after RTO/RPO and state replication requirements exist
 
 See [ROADMAP.md](docs/ROADMAP.md).
 
