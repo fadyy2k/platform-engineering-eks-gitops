@@ -1,93 +1,197 @@
-# Platform Engineering — EKS GitOps Lab
+# Platform Engineering — AWS EKS GitOps
 
 [![Terraform CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/terraform.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/terraform.yml)
 [![Kubernetes CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/kubernetes.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/kubernetes.yml)
 [![Security](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/security.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/security.yml)
+[![Image Supply Chain](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/image.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/image.yml)
 
-A clean platform-engineering reference project that provisions **AWS EKS with Terraform**, bootstraps **Argo CD GitOps**, validates Kubernetes manifests in CI, and defines an observability baseline with **Prometheus + Grafana**.
+A platform-engineering reference implementation for **AWS EKS, Terraform, GitHub OIDC, GitOps, supply-chain security, and observability**.
 
-This repository is intentionally separate from my DEPI projects: it is organized as a reusable platform pattern rather than a course deliverable.
+The project is deliberately organized as a reusable engineering pattern rather than a course deliverable. It separates bootstrap identity/state, environment-specific infrastructure, application delivery, GitOps, and observability so each trust boundary can be reviewed independently.
+
+> **Cost / activation note:** the repository contains the infrastructure and identity code, but it does not automatically create AWS resources. Running the bootstrap or EKS apply workflows can create billable AWS resources and should happen only after reviewing the Terraform plan and account controls.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
     DEV[Engineer] --> GH[GitHub]
-    GH --> CI[GitHub Actions]
-    CI --> TF[Terraform validation]
-    CI --> SEC[Secret + IaC security scans]
-    CI --> K8S[Kubernetes validation]
 
-    TF --> AWS[AWS]
-    AWS --> VPC[VPC / NAT / private subnets]
-    AWS --> EKS[EKS managed nodes]
+    subgraph CI[GitHub Actions]
+      STATIC[Static CI]
+      PLAN[Terraform Plan]
+      APPLY[Manual Terraform Apply]
+      IMG[Build / Scan / Sign]
+    end
+
+    GH --> STATIC
+    GH --> PLAN
+    GH --> APPLY
+    GH --> IMG
+
+    PLAN -->|OIDC: read-only role| AWSIAM[AWS IAM]
+    APPLY -->|OIDC: environment role| AWSIAM
+
+    subgraph STATE[Terraform State]
+      S3[S3 Versioned State]
+      KMS[KMS Encryption]
+      LOCK[S3 Native Lock]
+    end
+
+    PLAN --> STATE
+    APPLY --> STATE
+    KMS --> S3
+    LOCK --> S3
+
+    APPLY --> VPC[VPC / NAT / Private Subnets]
+    APPLY --> EKS[EKS / Managed Nodes / EBS CSI]
+
+    IMG --> GHCR[GHCR by Digest]
+    IMG --> TRIVY[Trivy Gate]
+    TRIVY --> COSIGN[Cosign Keyless Signature]
 
     GH --> ARGO[Argo CD]
-    ARGO --> DEMO[Demo workload]
-    ARGO --> OBS[Observability config]
+    ARGO --> EKS
+    GHCR --> EKS
 
-    EKS --> DEMO
-    EKS --> OBS
-    OBS --> PROM[Prometheus]
-    OBS --> GRAF[Grafana]
+    EKS --> DEMO[Demo Workload]
+    EKS --> PROM[Prometheus]
+    PROM --> GRAF[Grafana]
 ```
 
-## Engineering Goals
+## Trust Boundaries
 
-- **Private-first cluster networking** — worker nodes live in private subnets; public cluster API access is disabled by default.
-- **GitOps over click-ops** — application desired state lives in Git and Argo CD reconciles it.
-- **No committed secrets** — example configuration uses placeholders; runtime secrets are created out-of-band.
-- **Policy before apply** — Terraform formatting/validation, Kubernetes schema validation, secret scanning, and IaC scanning run before infrastructure changes.
-- **Observable by design** — Prometheus/Grafana values are versioned with the platform configuration.
-- **Safe automation** — CI validates by default; infrastructure apply is intentionally not auto-approved from pull requests.
+- **No long-lived AWS keys in GitHub** — plan/apply credentials are short-lived STS sessions issued through GitHub Actions OIDC.
+- **Plan and apply are different roles** — plans are read-only against AWS resources; applies receive an enumerated platform mutation policy.
+- **Fork PRs never receive the AWS plan role** — untrusted forks still get static validation without cloud credentials.
+- **Apply is environment-scoped** — `dev`, `staging`, and `prod` use GitHub Environment OIDC subjects and separate Terraform state keys.
+- **State is treated as sensitive** — S3 public access is blocked, versioning is enabled, KMS encryption is configured, and native S3 locking is used.
+- **Images are promoted by digest** — the project-owned demo image is scanned, attested, and keylessly signed with Cosign before it is considered promotable.
 
 ## Repository Layout
 
 ```text
 .
-├── infra/                         # Terraform: VPC + EKS
-├── apps/demo/                     # Hardened demo Kubernetes workload
-├── platform/argocd/               # Argo CD application definition
+├── bootstrap/                     # State bucket, KMS, GitHub OIDC + plan/apply roles
+├── infra/                         # Terraform VPC + EKS root module
+│   └── environments/              # dev / staging / prod variables + backend examples
+├── demo-app/                      # Minimal project-owned Go workload + Dockerfile
+├── apps/demo/                     # Hardened Kubernetes workload manifests
+├── platform/argocd/               # Argo CD desired-state definition
+├── platform/storage/              # Encrypted gp3 StorageClass
 ├── observability/                 # kube-prometheus-stack values
-├── docs/ROADMAP.md                # Build-out plan
-└── .github/workflows/             # Terraform, Kubernetes and security gates
+├── scripts/                       # Backend/GitHub configuration helpers
+├── docs/                          # IAM, state recovery, promotion, supply-chain docs
+└── .github/workflows/             # Validation, plan, apply, image, security workflows
 ```
 
-## Quick Start
+## Phase 2: Identity and Delivery
 
-### 1. Validate Terraform
+The repository now implements the code path for:
+
+- GitHub Actions → AWS OIDC federation
+- separate Terraform plan/apply roles
+- KMS-encrypted, versioned remote state with S3 native locking
+- independent `dev`, `staging`, and `prod` state/configuration
+- manual, protected-environment Terraform applies
+- project-owned container build
+- BuildKit provenance + SBOM attestations
+- Trivy image gate
+- Cosign keyless signing with GitHub OIDC
+
+AWS-side activation still requires an explicitly reviewed `terraform apply` of `bootstrap/`. See [Bootstrap](docs/BOOTSTRAP.md).
+
+## Quick Start — Local Validation Only
+
+These commands do **not** create AWS resources:
 
 ```bash
-cd infra
-cp terraform.tfvars.example terraform.tfvars
-terraform init
-terraform fmt -check -recursive
-terraform validate
-terraform plan
+make fmt
+make validate
+make k8s-check
+make demo-test
 ```
 
-### 2. Provision EKS
+## Activate Remote State + OIDC
 
-Review the plan, then run apply manually from an authenticated admin workstation:
+Use a short-lived, approved AWS bootstrap session and review every plan:
 
 ```bash
-terraform apply
-aws eks update-kubeconfig --region eu-central-1 --name platform-lab-dev
+cp bootstrap/terraform.tfvars.example bootstrap/terraform.tfvars
+terraform -chdir=bootstrap init
+terraform -chdir=bootstrap plan
+terraform -chdir=bootstrap apply
+
+./scripts/render-backend-config.sh dev
+./scripts/render-backend-config.sh staging
+./scripts/render-backend-config.sh prod
+./scripts/configure-github-repo.sh
 ```
 
-### 3. Bootstrap Argo CD
+Then local environment plans can use:
 
-Install Argo CD using the upstream Helm chart or manifests, then apply:
+```bash
+make plan TF_ENV=dev
+```
+
+Full sequence: [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md)
+
+## Environment Promotion
+
+```text
+PR
+ ├─ static Terraform / Kubernetes / security checks
+ └─ trusted OIDC plans: dev + staging + prod
+        │
+        ▼
+protected main
+ ├─ manual apply → dev
+ ├─ validate / soak
+ ├─ manual apply → staging
+ ├─ validate / soak
+ └─ manual apply → prod
+```
+
+Details: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md)
+
+## Container Supply Chain
+
+`demo-app/` is intentionally tiny so the delivery controls are easy to inspect. On protected `main` or a version tag, GitHub Actions:
+
+1. runs Go tests and `go vet`
+2. builds and publishes to GHCR
+3. emits BuildKit provenance and SBOM attestations
+4. scans the immutable digest with Trivy
+5. signs the digest with Cosign using GitHub OIDC
+6. verifies that the signature identity matches this repository's workflow
+
+Details and verification command: [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md)
+
+## Terraform State Recovery
+
+State versioning is useful only if recovery is documented. The recovery notes cover object versions, stale locks, KMS safety, and refresh-only validation:
+
+[docs/STATE_RECOVERY.md](docs/STATE_RECOVERY.md)
+
+## IAM Model
+
+The bootstrap policy intentionally avoids broad AWS managed administrator policies. IAM mutation is scoped to project-prefixed roles/policies, while network/EKS actions are explicitly enumerated.
+
+The remaining production hardening process is evidence-driven: exercise the stack in a non-production account, inspect CloudTrail denials, and add only justified permissions.
+
+[docs/IAM.md](docs/IAM.md)
+
+## GitOps + Observability
+
+After an EKS environment exists:
 
 ```bash
 kubectl apply -f platform/argocd/platform-demo-application.yaml
 ```
 
-Argo CD will reconcile the demo workload from `apps/demo`.
+Argo CD reconciles the application desired state from Git.
 
-### 4. Observability
-
-Install `kube-prometheus-stack` with:
+Monitoring values are versioned under `observability/`:
 
 ```bash
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
@@ -95,23 +199,39 @@ helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   -f observability/kube-prometheus-stack-values.yaml
 ```
 
-Create the Grafana admin secret separately; do not commit the password.
+Grafana credentials are referenced through an existing Kubernetes Secret and are not committed.
 
-## Security Model
+## Security Controls Already in the Repository
 
-- EKS API endpoint defaults to private access only.
-- No `0.0.0.0/0` SSH/admin ingress is defined.
-- Workloads use resource limits, non-root execution, dropped Linux capabilities, and RuntimeDefault seccomp where supported.
-- Terraform variables and `.env`-style files are ignored.
-- Gitleaks/Trivy security checks run in GitHub Actions.
-- Dependabot tracks Terraform and GitHub Actions updates.
-- Secret scanning and push protection are enabled on the repository.
+- protected `main` branch
+- CODEOWNERS
+- Dependabot
+- GitHub secret scanning + push protection
+- Gitleaks
+- Trivy IaC/config scanning
+- Terraform format/validate CI
+- Kubernetes schema validation
+- non-root workload security context
+- dropped Linux capabilities
+- RuntimeDefault seccomp
+- resource requests/limits
+- private-first EKS API default
+- encrypted gp3 storage class
+- OIDC-based AWS access design
+- signed container delivery design
 
-## What This Project Does Not Pretend To Be
+## Deliberate Gaps / Next Phase
 
-This is a **reference lab**, not an automatically production-ready landing zone. A production implementation would additionally require organizational IAM design, remote encrypted Terraform state with locking, OIDC-based CI cloud authentication, policy-as-code, network egress controls, centralized logging, SLOs/alerting, backup/restore tests, and a documented incident/runbook model.
+The next phase focuses on runtime policy and admission controls rather than adding broader cloud privileges:
 
-See [ROADMAP.md](docs/ROADMAP.md) for the planned progression.
+- Kyverno or Gatekeeper
+- signature verification admission policy
+- default-deny NetworkPolicy
+- Pod Security Admission labels
+- continuous workload scanning
+- runtime detection evaluation
+
+See [ROADMAP.md](docs/ROADMAP.md).
 
 ## License
 

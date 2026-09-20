@@ -4,6 +4,18 @@ updates:
     directory: "/infra"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "terraform"
+    directory: "/bootstrap"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/demo-app"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
+    directory: "/demo-app"
+    schedule:
+      interval: "weekly"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

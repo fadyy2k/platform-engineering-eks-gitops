@@ -11,3 +11,11 @@ kubeconfig*
 *.pem
 *.key
 .DS_Store
+
+# Rendered Terraform backend configuration
+*.backend.hcl
+!*.backend.hcl.example
+
+# Local Terraform plans
+*.tfplan
+plan.txt

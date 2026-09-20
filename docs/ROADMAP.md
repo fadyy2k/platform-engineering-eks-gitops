@@ -15,11 +15,11 @@ The repository starts as a safe, reproducible platform baseline and grows by add
 
 ## Phase 2 — Identity and Delivery
 
-- [ ] GitHub Actions → AWS OIDC federation
-- [ ] Dedicated least-privilege plan/apply roles
-- [ ] Remote Terraform state with encryption, locking and recovery documentation
-- [ ] Environment promotion model: dev → staging → prod
-- [ ] Signed container images with Cosign
+- [x] GitHub Actions → AWS OIDC federation (bootstrap code; AWS activation is explicit)
+- [x] Dedicated scoped plan/apply roles
+- [x] Remote Terraform state with KMS encryption, S3 native locking, versioning and recovery documentation
+- [x] Environment promotion model: dev → staging → prod
+- [x] Signed container supply chain with Cosign keyless GitHub OIDC
 
 ## Phase 3 — Policy and Runtime Security
 
