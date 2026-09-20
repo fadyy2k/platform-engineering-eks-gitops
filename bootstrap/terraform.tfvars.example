@@ -1,0 +1,4 @@
+project_name      = "platform-lab"
+aws_region        = "eu-central-1"
+github_repository = "fadyy2k/platform-engineering-eks-gitops"
+environments      = ["dev", "staging", "prod"]
