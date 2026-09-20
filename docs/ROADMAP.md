@@ -31,11 +31,11 @@ The repository starts as a safe, reproducible platform baseline and grows by add
 
 ## Phase 4 — Reliability
 
-- [ ] SLOs and recording rules
-- [ ] Alert routing
-- [ ] Cluster autoscaling / Karpenter evaluation
-- [ ] Backup and restore tests
-- [ ] Game-day failure scenarios and runbooks
+- [x] SLOs, recording rules and multi-window error-budget burn alerts
+- [x] Severity-aware Alertmanager routing topology (external receiver intentionally environment-specific)
+- [x] Workload HPA + documented Cluster Autoscaler/Karpenter evaluation
+- [x] Executable backup/restore smoke-test harness (live execution requires an approved cluster + Velero)
+- [x] Dry-run-by-default game-day failure scenarios and operator runbooks
 
 ## Phase 5 — Cost and Multi-environment Operations
 

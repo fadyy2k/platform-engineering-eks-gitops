@@ -5,8 +5,9 @@
 [![Security](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/security.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/security.yml)
 [![Image Supply Chain](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/image.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/image.yml)
 [![Policy & Runtime Security](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/policy.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/policy.yml)
+[![Reliability CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/reliability.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/reliability.yml)
 
-A platform-engineering reference implementation for **AWS EKS, Terraform, GitHub OIDC, GitOps, supply-chain security, admission policy, runtime detection, and observability**.
+A platform-engineering reference implementation for **AWS EKS, Terraform, GitHub OIDC, GitOps, supply-chain security, admission policy, runtime detection, observability, SLOs, and reliability engineering**.
 
 The project is deliberately organized as a reusable engineering pattern rather than a course deliverable. It separates bootstrap identity/state, environment-specific infrastructure, application delivery, GitOps, and observability so each trust boundary can be reviewed independently.
 
@@ -89,10 +90,11 @@ flowchart LR
 ├── platform/argocd/               # Argo CD desired-state definition
 ├── platform/storage/              # Encrypted gp3 StorageClass
 ├── observability/                 # kube-prometheus-stack values
+├── reliability/                   # SLO rules, HPA/PDB, alert routing and tests
 ├── security/                      # Kyverno, Trivy Operator and Falco policy/config
-├── scripts/                       # Backend/GitHub configuration helpers
-├── docs/                          # IAM, state recovery, promotion, supply-chain docs
-└── .github/workflows/             # Validation, plan, apply, image, security workflows
+├── scripts/                       # Bootstrap, recovery and game-day helpers
+├── docs/                          # Architecture, security, reliability and runbooks
+└── .github/workflows/             # Validation, delivery, policy and reliability CI
 ```
 
 ## Phase 2: Identity and Delivery
@@ -126,6 +128,24 @@ Phase 3 moves the project beyond pre-deployment scanning and adds controls insid
 
 The signed image policy is tested against the real GHCR digest created in Phase 2. See [Runtime Security](docs/RUNTIME_SECURITY.md).
 
+## Phase 4: Reliability Engineering
+
+Phase 4 adds operational evidence and failure handling rather than another layer of decorative infrastructure:
+
+- explicit **99.5% availability SLO** based on application HTTP outcomes
+- Prometheus recording rules plus fast/slow **multi-window error-budget burn alerts**
+- a project-owned `/metrics` endpoint with unit-tested success/failure counters
+- **ServiceMonitor** discovery and Prometheus rule tests with `promtool`
+- **PodDisruptionBudget**, topology spreading and zero-unavailable rolling updates
+- CPU-based **HorizontalPodAutoscaler** from 2 to 6 replicas
+- Argo CD-managed **metrics-server** and pinned `kube-prometheus-stack`
+- severity-aware Alertmanager routing topology without committing a private paging endpoint
+- dry-run-by-default **game-day tooling** for pod failure and controlled HTTP 503 injection
+- executable **Velero backup/restore smoke-test harness** for a live approved cluster
+- operational runbooks and an ADR comparing Cluster Autoscaler with Karpenter
+
+The repo distinguishes what CI can prove from what still requires a real cluster. See [Reliability Engineering](docs/RELIABILITY.md), [Runbooks](docs/RUNBOOKS.md), and [ADR-001](docs/adr/001-node-autoscaling.md).
+
 ## Quick Start — Local Validation Only
 
 These commands do **not** create AWS resources:
@@ -135,6 +155,8 @@ make fmt
 make validate
 make k8s-check
 make demo-test
+make policy-test
+make reliability-test
 ```
 
 ## Activate Remote State + OIDC
@@ -208,23 +230,20 @@ The remaining production hardening process is evidence-driven: exercise the stac
 
 ## GitOps + Observability
 
-After an EKS environment exists:
+After an EKS environment and Argo CD exist, the platform controllers can be bootstrapped from the versioned Applications:
 
 ```bash
+kubectl apply -f platform/argocd/monitoring-application.yaml
+kubectl apply -f platform/argocd/metrics-server-application.yaml
+kubectl apply -f platform/argocd/kyverno-application.yaml
+kubectl apply -f platform/argocd/trivy-operator-application.yaml
+kubectl apply -f platform/argocd/falco-application.yaml
+kubectl apply -f platform/argocd/security-policies-application.yaml
 kubectl apply -f platform/argocd/platform-demo-application.yaml
+kubectl apply -f platform/argocd/reliability-application.yaml
 ```
 
-Argo CD reconciles the application desired state from Git.
-
-Monitoring values are versioned under `observability/`:
-
-```bash
-helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
-  --namespace monitoring --create-namespace \
-  -f observability/kube-prometheus-stack-values.yaml
-```
-
-Grafana credentials are referenced through an existing Kubernetes Secret and are not committed.
+Argo CD then reconciles monitoring, policy, workload and reliability desired state from Git. Grafana credentials remain an external Kubernetes Secret and are not committed.
 
 ## Security Controls Already in the Repository
 
@@ -250,16 +269,23 @@ Grafana credentials are referenced through an existing Kubernetes Secret and are
 - Trivy Operator continuous workload scanning configuration
 - Falco modern-eBPF runtime detection configuration
 - policy/chart rendering CI
+- SLO recording rules and multi-window error-budget burn alerts
+- ServiceMonitor-backed application metrics
+- PodDisruptionBudget and topology spreading
+- HPA with metrics-server
+- severity-aware Alertmanager routing topology
+- dry-run-by-default game-day tooling
+- Velero backup/restore smoke-test harness
+- reliability runbooks and node-autoscaling ADR
 
 ## Deliberate Gaps / Next Phase
 
-Phase 4 focuses on **reliability engineering and operational response**:
+Phase 5 focuses on **cost and multi-environment operations**:
 
-- SLOs and recording rules
-- actionable alert routing
-- autoscaling / Karpenter evaluation
-- backup and restore tests
-- game-day failure scenarios and runbooks
+- cost visibility and budget alerts
+- right-sizing recommendations based on measured demand
+- reusable environment modules
+- optional multi-region disaster-recovery pattern
 
 See [ROADMAP.md](docs/ROADMAP.md).
 

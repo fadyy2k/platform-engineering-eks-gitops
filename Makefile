@@ -2,7 +2,7 @@ TF_ENV ?= dev
 BACKEND_FILE := environments/$(TF_ENV).backend.hcl
 VAR_FILE := environments/$(TF_ENV).tfvars.example
 
-.PHONY: fmt validate bootstrap-init bootstrap-plan bootstrap-apply backend init plan apply k8s-check demo-test policy-test
+.PHONY: fmt validate bootstrap-init bootstrap-plan bootstrap-apply backend init plan apply k8s-check demo-test reliability-test game-day backup-restore-smoke policy-test
 
 fmt:
 	terraform fmt -recursive infra bootstrap
@@ -44,3 +44,14 @@ demo-test:
 policy-test:
 	docker run --rm -v "$$(pwd):/repo" -w /repo ghcr.io/kyverno/kyverno-cli:v1.19.1 test security/kyverno/tests/digest --require-tests
 	docker run --rm -v "$$(pwd):/repo" -w /repo ghcr.io/kyverno/kyverno-cli:v1.19.1 test security/kyverno/tests/signature --registry --require-tests
+
+reliability-test:
+	docker run --rm -v "$$(pwd):/work" mikefarah/yq:4.53.6 '{"groups": .spec.groups}' /work/reliability/manifests/platform-demo-rules.yaml > /tmp/platform-demo.rules.yaml
+	docker run --rm --entrypoint /bin/promtool -v /tmp:/rules prom/prometheus:v3.14.0 check rules /rules/platform-demo.rules.yaml
+	docker run --rm --entrypoint /bin/promtool -v /tmp:/rules -v "$$(pwd):/work" -w /work/reliability/tests prom/prometheus:v3.14.0 test rules platform-demo-rules-test.yaml
+
+game-day:
+	./scripts/game-day.sh pod-failure
+
+backup-restore-smoke:
+	./scripts/backup-restore-smoke.sh

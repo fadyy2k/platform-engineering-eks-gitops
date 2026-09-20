@@ -1,0 +1,44 @@
+rule_files:
+  - /rules/platform-demo.rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'platform_demo_http_requests_total{code="2xx"}'
+        values: '0+93x420'
+      - series: 'platform_demo_http_requests_total{code="5xx"}'
+        values: '0+7x420'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: PlatformDemoFastErrorBudgetBurn
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: PlatformDemoSlowErrorBudgetBurn
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              slo: availability
+            exp_annotations:
+              summary: Platform demo is steadily consuming its availability error budget
+              description: Error ratio is above the 6x burn-rate threshold for the 99.5% availability SLO.
+              runbook_url: https://github.com/fadyy2k/platform-engineering-eks-gitops/blob/main/docs/RUNBOOKS.md#platformdemoslowerrorbudgetburn
+
+  - interval: 1m
+    input_series:
+      - series: 'platform_demo_http_requests_total{code="2xx"}'
+        values: '0+80x120'
+      - series: 'platform_demo_http_requests_total{code="5xx"}'
+        values: '0+20x120'
+    alert_rule_test:
+      - eval_time: 65m
+        alertname: PlatformDemoFastErrorBudgetBurn
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              slo: availability
+            exp_annotations:
+              summary: Platform demo is rapidly consuming its availability error budget
+              description: Error ratio is above the 14.4x burn-rate threshold for the 99.5% availability SLO.
+              runbook_url: https://github.com/fadyy2k/platform-engineering-eks-gitops/blob/main/docs/RUNBOOKS.md#platformdemofasterrorbudgetburn

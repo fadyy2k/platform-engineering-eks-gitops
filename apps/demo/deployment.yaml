@@ -21,6 +21,14 @@ spec:
         app.kubernetes.io/name: platform-demo
         app.kubernetes.io/part-of: platform-engineering-lab
     spec:
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: platform-demo
       securityContext:
         runAsNonRoot: true
         seccompProfile:

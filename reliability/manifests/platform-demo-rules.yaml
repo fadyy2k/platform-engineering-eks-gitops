@@ -1,0 +1,75 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: platform-demo-slo
+  namespace: platform-demo
+  labels:
+    app.kubernetes.io/name: platform-demo
+    app.kubernetes.io/part-of: platform-engineering-lab
+spec:
+  groups:
+    - name: platform-demo.slo.recording
+      interval: 30s
+      rules:
+        - record: platform_demo:http_requests:rate5m
+          expr: sum(rate(platform_demo_http_requests_total[5m]))
+        - record: platform_demo:http_errors:rate5m
+          expr: sum(rate(platform_demo_http_requests_total{code="5xx"}[5m]))
+        - record: platform_demo:availability:ratio5m
+          expr: 1 - (sum(rate(platform_demo_http_requests_total{code="5xx"}[5m])) / clamp_min(sum(rate(platform_demo_http_requests_total[5m])), 0.001))
+
+    - name: platform-demo.slo.alerts
+      interval: 30s
+      rules:
+        - alert: PlatformDemoFastErrorBudgetBurn
+          expr: |
+            (
+              sum(rate(platform_demo_http_requests_total{code="5xx"}[5m]))
+              /
+              clamp_min(sum(rate(platform_demo_http_requests_total[5m])), 0.001)
+            ) > 0.072
+            and
+            (
+              sum(rate(platform_demo_http_requests_total{code="5xx"}[1h]))
+              /
+              clamp_min(sum(rate(platform_demo_http_requests_total[1h])), 0.001)
+            ) > 0.072
+          for: 2m
+          labels:
+            severity: critical
+            slo: availability
+          annotations:
+            summary: Platform demo is rapidly consuming its availability error budget
+            description: Error ratio is above the 14.4x burn-rate threshold for the 99.5% availability SLO.
+            runbook_url: https://github.com/fadyy2k/platform-engineering-eks-gitops/blob/main/docs/RUNBOOKS.md#platformdemofasterrorbudgetburn
+
+        - alert: PlatformDemoSlowErrorBudgetBurn
+          expr: |
+            (
+              sum(rate(platform_demo_http_requests_total{code="5xx"}[30m]))
+              /
+              clamp_min(sum(rate(platform_demo_http_requests_total[30m])), 0.001)
+            ) > 0.03
+            and
+            (
+              sum(rate(platform_demo_http_requests_total{code="5xx"}[6h]))
+              /
+              clamp_min(sum(rate(platform_demo_http_requests_total[6h])), 0.001)
+            ) > 0.03
+          for: 15m
+          labels:
+            severity: warning
+            slo: availability
+          annotations:
+            summary: Platform demo is steadily consuming its availability error budget
+            description: Error ratio is above the 6x burn-rate threshold for the 99.5% availability SLO.
+            runbook_url: https://github.com/fadyy2k/platform-engineering-eks-gitops/blob/main/docs/RUNBOOKS.md#platformdemoslowerrorbudgetburn
+
+        - alert: PlatformDemoTargetDown
+          expr: up{job=~".*platform-demo.*"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Prometheus cannot scrape the platform demo target
+            runbook_url: https://github.com/fadyy2k/platform-engineering-eks-gitops/blob/main/docs/RUNBOOKS.md#platformdemotargetdown

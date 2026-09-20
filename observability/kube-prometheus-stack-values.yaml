@@ -12,7 +12,7 @@ grafana:
 
 prometheus:
   prometheusSpec:
-    retention: 7d
+    retention: 14d
     resources:
       requests:
         cpu: 200m
@@ -20,6 +20,10 @@ prometheus:
       limits:
         cpu: "1"
         memory: 2Gi
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    ruleSelector: {}
+    ruleNamespaceSelector: {}
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -31,6 +35,8 @@ prometheus:
 
 alertmanager:
   alertmanagerSpec:
+    alertmanagerConfigSelector: {}
+    alertmanagerConfigNamespaceSelector: {}
     resources:
       requests:
         cpu: 50m
