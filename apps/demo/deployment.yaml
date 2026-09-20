@@ -35,7 +35,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: platform-demo
-          image: ghcr.io/fadyy2k/platform-demo@sha256:6cbe1af141d721d020ceda70c7df7cd92cad54ecac2682855ebb4ba709b1b005
+          image: ghcr.io/fadyy2k/platform-demo@sha256:5fc1d1e30a9a7ec08830000b794dd5fefdec2026782224f9bb6bf87de89889db
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
