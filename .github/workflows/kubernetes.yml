@@ -1,0 +1,35 @@
+name: Kubernetes CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "platform/**"
+      - ".github/workflows/kubernetes.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "platform/**"
+      - ".github/workflows/kubernetes.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Reject latest image tags
+        run: |
+          if grep -R --line-number -E 'image:.*:latest([[:space:]]|$)' apps platform; then
+            echo "Mutable :latest image tags are not allowed."
+            exit 1
+          fi
+      - name: Validate Kubernetes schemas
+        run: |
+          docker run --rm             -v "$PWD:/work"             -w /work             ghcr.io/yannh/kubeconform:v0.6.7             -strict -summary -ignore-missing-schemas apps platform
