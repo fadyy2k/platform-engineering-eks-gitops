@@ -53,6 +53,13 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
 
+  cluster_addons = {
+    coredns            = {}
+    kube-proxy         = {}
+    vpc-cni            = {}
+    aws-ebs-csi-driver = {}
+  }
+
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
