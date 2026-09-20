@@ -1,0 +1,27 @@
+# Falco chart 9.1.0 / app v0.44.1
+driver:
+  enabled: true
+  kind: modern_ebpf
+  modernEbpf:
+    leastPrivileged: true
+    sysfsMount: true
+
+metrics:
+  enabled: true
+  interval: 15m
+  rulesCountersEnabled: true
+  resourceUtilizationEnabled: true
+
+falco:
+  priority: notice
+  json_output: true
+  json_include_output_fields_property: true
+  webserver:
+    enabled: true
+    prometheus_metrics_enabled: true
+
+falcosidekick:
+  enabled: false
+
+serviceMonitor:
+  create: false

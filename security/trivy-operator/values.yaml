@@ -1,0 +1,27 @@
+# Trivy Operator chart 0.36.0 / app v0.34.0
+operator:
+  replicas: 1
+  scanJobTimeout: 5m
+  scanJobsConcurrentLimit: 5
+  scannerReportTTL: "24h"
+  vulnerabilityScannerEnabled: true
+  sbomGenerationEnabled: true
+  configAuditScannerEnabled: true
+  rbacAssessmentScannerEnabled: true
+  infraAssessmentScannerEnabled: true
+  clusterComplianceEnabled: true
+  exposedSecretScannerEnabled: true
+  accessGlobalSecretsAndServiceAccount: false
+  metricsFindingsEnabled: true
+  metricsVulnIdEnabled: false
+  metricsExposedSecretInfo: false
+
+trivy:
+  mode: Standalone
+  severity: MEDIUM,HIGH,CRITICAL
+  ignoreUnfixed: false
+  slow: true
+  timeout: "5m0s"
+
+serviceMonitor:
+  enabled: false

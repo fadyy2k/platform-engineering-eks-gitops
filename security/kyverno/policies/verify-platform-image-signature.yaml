@@ -1,0 +1,46 @@
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: verify-platform-demo-signature
+  annotations:
+    policies.kyverno.io/title: Verify Platform Demo Cosign Signature
+    policies.kyverno.io/category: Software Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Only images signed keylessly by the repository's trusted GitHub Actions workflow are admitted.
+spec:
+  validationActions:
+    - Deny
+  webhookConfiguration:
+    timeoutSeconds: 20
+  evaluation:
+    background:
+      enabled: false
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: platform-demo
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  matchImageReferences:
+    - glob: "ghcr.io/fadyy2k/platform-demo*"
+  attestors:
+    - name: githubActions
+      cosign:
+        keyless:
+          identities:
+            - subject: "https://github.com/fadyy2k/platform-engineering-eks-gitops/.github/workflows/image.yml@refs/heads/main"
+              issuer: "https://token.actions.githubusercontent.com"
+        ctlog:
+          url: https://rekor.sigstore.dev
+  validations:
+    - expression: >-
+        images.containers.map(image, verifyImageSignatures(image, [attestors.githubActions])).all(result, result > 0) &&
+        images.initContainers.map(image, verifyImageSignatures(image, [attestors.githubActions])).all(result, result > 0) &&
+        images.ephemeralContainers.map(image, verifyImageSignatures(image, [attestors.githubActions])).all(result, result > 0)
+      message: >-
+        The platform-demo image must have a valid Cosign keyless signature from this repository's image.yml workflow.

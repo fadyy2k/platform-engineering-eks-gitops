@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: signed-platform-demo
+  namespace: platform-demo
+spec:
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: app
+      image: ghcr.io/fadyy2k/platform-demo@sha256:6cbe1af141d721d020ceda70c7df7cd92cad54ecac2682855ebb4ba709b1b005
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL

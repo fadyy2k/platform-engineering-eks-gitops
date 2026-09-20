@@ -1,0 +1,14 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: platform-demo-signature
+policies:
+  - ../../policies/verify-platform-image-signature.yaml
+resources:
+  - resource.yaml
+results:
+  - kind: Pod
+    policy: verify-platform-demo-signature
+    resources:
+      - signed-platform-demo
+    result: pass

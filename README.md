@@ -4,8 +4,9 @@
 [![Kubernetes CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/kubernetes.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/kubernetes.yml)
 [![Security](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/security.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/security.yml)
 [![Image Supply Chain](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/image.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/image.yml)
+[![Policy & Runtime Security](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/policy.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/policy.yml)
 
-A platform-engineering reference implementation for **AWS EKS, Terraform, GitHub OIDC, GitOps, supply-chain security, and observability**.
+A platform-engineering reference implementation for **AWS EKS, Terraform, GitHub OIDC, GitOps, supply-chain security, admission policy, runtime detection, and observability**.
 
 The project is deliberately organized as a reusable engineering pattern rather than a course deliverable. It separates bootstrap identity/state, environment-specific infrastructure, application delivery, GitOps, and observability so each trust boundary can be reviewed independently.
 
@@ -54,7 +55,13 @@ flowchart LR
     ARGO --> EKS
     GHCR --> EKS
 
-    EKS --> DEMO[Demo Workload]
+    ARGO --> KYVERNO[Kyverno Admission]
+    ARGO --> TVOP[Trivy Operator]
+    ARGO --> FALCO[Falco Runtime]
+    KYVERNO --> DEMO[Demo Workload]
+    EKS --> DEMO
+    TVOP --> DEMO
+    FALCO --> EKS
     EKS --> PROM[Prometheus]
     PROM --> GRAF[Grafana]
 ```
@@ -67,6 +74,8 @@ flowchart LR
 - **Apply is environment-scoped** — `dev`, `staging`, and `prod` use GitHub Environment OIDC subjects and separate Terraform state keys.
 - **State is treated as sensitive** — S3 public access is blocked, versioning is enabled, KMS encryption is configured, and native S3 locking is used.
 - **Images are promoted by digest** — the project-owned demo image is scanned, attested, and keylessly signed with Cosign before it is considered promotable.
+- **Admission verifies provenance, not just syntax** — Kyverno denies mutable/unapproved images and verifies the Cosign keyless identity before pods are admitted.
+- **Runtime controls are independent of CI** — Pod Security Admission, NetworkPolicy, Trivy Operator, and Falco continue enforcing/observing after deployment.
 
 ## Repository Layout
 
@@ -80,6 +89,7 @@ flowchart LR
 ├── platform/argocd/               # Argo CD desired-state definition
 ├── platform/storage/              # Encrypted gp3 StorageClass
 ├── observability/                 # kube-prometheus-stack values
+├── security/                      # Kyverno, Trivy Operator and Falco policy/config
 ├── scripts/                       # Backend/GitHub configuration helpers
 ├── docs/                          # IAM, state recovery, promotion, supply-chain docs
 └── .github/workflows/             # Validation, plan, apply, image, security workflows
@@ -100,6 +110,21 @@ The repository now implements the code path for:
 - Cosign keyless signing with GitHub OIDC
 
 AWS-side activation still requires an explicitly reviewed `terraform apply` of `bootstrap/`. See [Bootstrap](docs/BOOTSTRAP.md).
+
+
+## Phase 3: Policy and Runtime Security
+
+Phase 3 moves the project beyond pre-deployment scanning and adds controls inside the Kubernetes trust boundary:
+
+- Kubernetes **restricted Pod Security Admission** for `platform-demo`
+- default-deny ingress/egress **NetworkPolicy** with explicit DNS and application traffic
+- Kyverno **ValidatingPolicy** requiring the project-owned image by SHA-256 digest
+- Kyverno **ImageValidatingPolicy** verifying the Cosign keyless signature from `image.yml`
+- Trivy Operator for recurring vulnerability, SBOM, configuration, RBAC, infrastructure and compliance reports
+- Falco runtime detection with the modern eBPF driver and least-privileged chart mode
+- dedicated policy CI that executes Kyverno positive/negative tests and renders every pinned security Helm chart
+
+The signed image policy is tested against the real GHCR digest created in Phase 2. See [Runtime Security](docs/RUNTIME_SECURITY.md).
 
 ## Quick Start — Local Validation Only
 
@@ -219,17 +244,22 @@ Grafana credentials are referenced through an existing Kubernetes Secret and are
 - encrypted gp3 storage class
 - OIDC-based AWS access design
 - signed container delivery design
+- restricted Pod Security Admission
+- default-deny NetworkPolicy
+- Kyverno immutable-image and keyless-signature admission policies
+- Trivy Operator continuous workload scanning configuration
+- Falco modern-eBPF runtime detection configuration
+- policy/chart rendering CI
 
 ## Deliberate Gaps / Next Phase
 
-The next phase focuses on runtime policy and admission controls rather than adding broader cloud privileges:
+Phase 4 focuses on **reliability engineering and operational response**:
 
-- Kyverno or Gatekeeper
-- signature verification admission policy
-- default-deny NetworkPolicy
-- Pod Security Admission labels
-- continuous workload scanning
-- runtime detection evaluation
+- SLOs and recording rules
+- actionable alert routing
+- autoscaling / Karpenter evaluation
+- backup and restore tests
+- game-day failure scenarios and runbooks
 
 See [ROADMAP.md](docs/ROADMAP.md).
 

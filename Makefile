@@ -2,7 +2,7 @@ TF_ENV ?= dev
 BACKEND_FILE := environments/$(TF_ENV).backend.hcl
 VAR_FILE := environments/$(TF_ENV).tfvars.example
 
-.PHONY: fmt validate bootstrap-init bootstrap-plan bootstrap-apply backend init plan apply k8s-check demo-test
+.PHONY: fmt validate bootstrap-init bootstrap-plan bootstrap-apply backend init plan apply k8s-check demo-test policy-test
 
 fmt:
 	terraform fmt -recursive infra bootstrap
@@ -40,3 +40,7 @@ k8s-check:
 
 demo-test:
 	cd demo-app && go test ./... && go vet ./...
+
+policy-test:
+	docker run --rm -v "$$(pwd):/repo" -w /repo ghcr.io/kyverno/kyverno-cli:v1.19.1 test security/kyverno/tests/digest --require-tests
+	docker run --rm -v "$$(pwd):/repo" -w /repo ghcr.io/kyverno/kyverno-cli:v1.19.1 test security/kyverno/tests/signature --registry --require-tests
