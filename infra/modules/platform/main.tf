@@ -48,6 +48,10 @@ module "eks" {
   cluster_name    = local.name
   cluster_version = var.kubernetes_version
 
+  cluster_upgrade_policy = {
+    support_type = "STANDARD"
+  }
+
   cluster_endpoint_public_access  = var.cluster_endpoint_public_access
   cluster_endpoint_private_access = true
 

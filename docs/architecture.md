@@ -75,3 +75,9 @@ Workloads consume images by digest. Build provenance, SBOM, vulnerability scan a
 ### 5. Failure is designed, not improvised
 
 SLO alerts map to runbooks. Game-day tools are dry-run by default. Backup/restore verification is explicit and separate from merely configuring backup tooling.
+
+## Live-readiness boundaries
+
+The current reference baseline uses EKS **1.36** with `STANDARD` support policy. Version support is re-checked before any real apply rather than freezing an old lab version indefinitely.
+
+Argo CD desired state is also split by destination namespace. Monitoring-owned objects such as `AlertmanagerConfig` and the OpenCost budget `PrometheusRule` live in monitoring-specific application paths; workload HPA/PDB/ServiceMonitor/VPA objects remain in `platform-demo`. This avoids relying on cross-namespace behavior from an Application whose declared destination points somewhere else.

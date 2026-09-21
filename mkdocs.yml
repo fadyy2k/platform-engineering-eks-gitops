@@ -20,6 +20,8 @@ nav:
       - SLOs & Failure Testing: RELIABILITY.md
       - Runbooks: RUNBOOKS.md
   - Cost & Operations: COST_OPERATIONS.md
+  - Live Activation: LIVE_ACTIVATION.md
+  - Evidence: EVIDENCE.md
   - Decisions:
       - Node Autoscaling: adr/001-node-autoscaling.md
       - Multi-region DR: adr/002-multi-region-dr.md

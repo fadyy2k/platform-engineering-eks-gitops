@@ -88,7 +88,7 @@ jobs:
             -w /work \
             ghcr.io/yannh/kubeconform:v0.8.0 \
             -strict -summary -ignore-missing-schemas \
-            apps platform reliability/manifests
+            apps platform reliability/manifests reliability/monitoring
 
   shell:
     runs-on: ubuntu-latest

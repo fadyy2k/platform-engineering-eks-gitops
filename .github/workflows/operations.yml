@@ -63,7 +63,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/work" mikefarah/yq:4.53.6 \
             '{"groups": .spec.groups}' \
-            /work/cost/manifests/opencost-budget-rule.yaml \
+            /work/cost/monitoring/opencost-budget-rule.yaml \
             > /tmp/opencost-budget.rules.yaml
       - name: Validate and test cost rules
         run: |
@@ -84,7 +84,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/work" -w /work \
             ghcr.io/yannh/kubeconform:v0.8.0 \
-            -strict -summary -ignore-missing-schemas cost/manifests platform/argocd
+            -strict -summary -ignore-missing-schemas cost/manifests cost/monitoring platform/argocd
 
   shell:
     runs-on: ubuntu-latest
