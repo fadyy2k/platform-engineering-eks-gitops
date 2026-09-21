@@ -1,0 +1,106 @@
+name: Live Readiness CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - "platform/argocd/**"
+      - "reliability/**"
+      - "cost/**"
+      - "scripts/preflight.sh"
+      - "scripts/bootstrap-argocd.sh"
+      - "docs/LIVE_ACTIVATION.md"
+      - "docs/EVIDENCE.md"
+      - ".github/workflows/live-readiness.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - "platform/argocd/**"
+      - "reliability/**"
+      - "cost/**"
+      - "scripts/preflight.sh"
+      - "scripts/bootstrap-argocd.sh"
+      - "docs/LIVE_ACTIVATION.md"
+      - "docs/EVIDENCE.md"
+      - ".github/workflows/live-readiness.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Shellcheck activation helpers
+        run: |
+          docker run --rm --entrypoint shellcheck \
+            -v "$PWD:/mnt" -w /mnt koalaman/shellcheck-alpine:stable \
+            scripts/preflight.sh scripts/bootstrap-argocd.sh
+      - name: Local-only preflight
+        run: ./scripts/preflight.sh --local
+
+  namespace-boundaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Verify monitoring resources stay in monitoring paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_dir() {
+            local dir="$1" expected="$2"
+            while IFS= read -r file; do
+              namespace=$(docker run --rm -v "$PWD:/work" mikefarah/yq:4.53.6 \
+                '.metadata.namespace // ""' "/work/$file")
+              if [[ "$namespace" != "$expected" ]]; then
+                echo "$file declares namespace '$namespace'; expected '$expected'"
+                exit 1
+              fi
+            done < <(find "$dir" -maxdepth 1 -type f -name '*.yaml' | sort)
+          }
+          check_dir reliability/monitoring monitoring
+          check_dir cost/monitoring monitoring
+
+      - name: Verify Argo destination boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          assert_dest() {
+            local file="$1" expected="$2"
+            actual=$(docker run --rm -v "$PWD:/work" mikefarah/yq:4.53.6 \
+              '.spec.destination.namespace' "/work/$file")
+            [[ "$actual" == "$expected" ]] || {
+              echo "$file destination is '$actual'; expected '$expected'"
+              exit 1
+            }
+          }
+          assert_dest platform/argocd/reliability-application.yaml platform-demo
+          assert_dest platform/argocd/reliability-monitoring-application.yaml monitoring
+          assert_dest platform/argocd/cost-controls-application.yaml platform-demo
+          assert_dest platform/argocd/cost-monitoring-application.yaml monitoring
+
+  eks-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Verify current EKS example baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            infra/terraform.tfvars.example
+            infra/environments/dev.tfvars.example
+            infra/environments/staging.tfvars.example
+            infra/environments/prod.tfvars.example
+          )
+          for file in "${files[@]}"; do
+            grep -q 'kubernetes_version = "1.36"' "$file" || {
+              echo "$file is not on the 1.36 baseline"
+              exit 1
+            }
+          done
+          grep -q 'support_type = "STANDARD"' infra/modules/platform/main.tf

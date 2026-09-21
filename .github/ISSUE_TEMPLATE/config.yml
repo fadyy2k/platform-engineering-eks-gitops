@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/fadyy2k/platform-engineering-eks-gitops/security/policy
+    about: Do not disclose credentials or live-system exploit details in a public issue.

@@ -43,3 +43,17 @@ The repository starts as a safe, reproducible platform baseline and grows by add
 - [x] VPA recommender-only right-sizing recommendations
 - [x] Reusable Terraform platform module with environment-specific roots/state
 - [x] Optional active/passive multi-region disaster-recovery pattern documented with activation criteria
+
+
+## Phase 6 — Live-readiness Hardening
+
+- [x] Move the EKS baseline to Kubernetes 1.36 with `STANDARD` support policy
+- [x] Split monitoring-namespace and workload-namespace Argo applications
+- [x] Add read-only activation preflight and dry-run Argo bootstrap helper
+- [x] Add live activation/evidence runbooks, contribution guidance and issue templates
+- [x] Capture public CI evidence without claiming a live cluster
+- [ ] Provision an approved non-production AWS dev environment
+- [ ] Prove GitHub OIDC + remote-state plan/apply against AWS
+- [ ] Reconcile the platform with Argo CD and capture in-cluster security evidence
+- [ ] Execute the controlled SLO game day and Velero restore drill
+- [ ] Capture real OpenCost/VPA data and evaluate autoscaling from measured load

@@ -1,0 +1,32 @@
+name: Live validation evidence
+description: Track a non-production runtime validation exercise.
+title: "evidence: "
+labels: [documentation]
+body:
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: dev (do not publish account IDs or private endpoints)
+    validations:
+      required: true
+  - type: textarea
+    id: controls
+    attributes:
+      label: Controls being validated
+      placeholder: OIDC, Argo reconciliation, Kyverno admission, SLO alert, restore drill...
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Result / evidence links
+      description: Public or sanitized evidence only.
+    validations:
+      required: true
+  - type: textarea
+    id: cleanup
+    attributes:
+      label: Cleanup / teardown status
+    validations:
+      required: true

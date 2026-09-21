@@ -25,7 +25,7 @@ variable "vpc_cidr" {
 variable "kubernetes_version" {
   description = "EKS Kubernetes version."
   type        = string
-  default     = "1.31"
+  default     = "1.36"
 }
 
 variable "cluster_endpoint_public_access" {

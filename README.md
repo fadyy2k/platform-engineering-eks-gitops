@@ -7,6 +7,7 @@
 [![Policy & Runtime Security](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/policy.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/policy.yml)
 [![Reliability CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/reliability.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/reliability.yml)
 [![Cost & Operations CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/operations.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/operations.yml)
+[![Live Readiness CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/live-readiness.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/live-readiness.yml)
 
 A platform-engineering reference implementation for **AWS EKS, Terraform, GitHub OIDC, GitOps, supply-chain security, admission policy, runtime detection, observability, SLOs, and reliability engineering**.
 
@@ -91,8 +92,8 @@ flowchart LR
 ├── platform/argocd/               # Argo CD desired-state definition
 ├── platform/storage/              # Encrypted gp3 StorageClass
 ├── observability/                 # kube-prometheus-stack values
-├── reliability/                   # SLO rules, HPA/PDB, alert routing and tests
-├── cost/                          # OpenCost values, budget alerts and VPA recommendations
+├── reliability/                   # Workload SLO/resilience + monitoring-scoped alert routing
+├── cost/                          # OpenCost/VPA workload controls + monitoring-scoped budget rules
 ├── security/                      # Kyverno, Trivy Operator and Falco policy/config
 ├── scripts/                       # Bootstrap, recovery and game-day helpers
 ├── docs/                          # Architecture, security, reliability and runbooks
@@ -163,11 +164,25 @@ Phase 5 adds operational economics and reuse without enabling automatic cost-dri
 
 See [Cost Operations](docs/COST_OPERATIONS.md) and [ADR-002](docs/adr/002-multi-region-dr.md).
 
+## Phase 6: Live-readiness Hardening
+
+Before any AWS activation, the reference now also includes:
+
+- **EKS 1.36** as the dev/staging/prod example baseline, with `STANDARD` support policy
+- separate Argo applications for `monitoring`-scoped and `platform-demo`-scoped resources
+- a read-only **preflight** that exposes the active account/region and cost boundary without changing cloud state
+- a dry-run-by-default **Argo CD bootstrap** that keeps the administrative service private
+- a step-by-step **live activation runbook** and an evidence ledger that clearly separates CI proof from runtime proof
+- public contribution/design/live-validation issue templates
+
+See [Live Activation](docs/LIVE_ACTIVATION.md) and [Engineering Evidence](docs/EVIDENCE.md).
+
 ## Quick Start — Local Validation Only
 
 These commands do **not** create AWS resources:
 
 ```bash
+./scripts/preflight.sh --local
 make fmt
 make validate
 make k8s-check
@@ -259,9 +274,11 @@ kubectl apply -f platform/argocd/falco-application.yaml
 kubectl apply -f platform/argocd/security-policies-application.yaml
 kubectl apply -f platform/argocd/platform-demo-application.yaml
 kubectl apply -f platform/argocd/reliability-application.yaml
+kubectl apply -f platform/argocd/reliability-monitoring-application.yaml
 kubectl apply -f platform/argocd/vpa-application.yaml
 kubectl apply -f platform/argocd/opencost-application.yaml
 kubectl apply -f platform/argocd/cost-controls-application.yaml
+kubectl apply -f platform/argocd/cost-monitoring-application.yaml
 ```
 
 Argo CD then reconciles monitoring, policy, workload and reliability desired state from Git. Grafana credentials remain an external Kubernetes Secret and are not committed.
