@@ -1,42 +1,83 @@
-Local Runtime Evidence — kind-platform-local
+Local Runtime Evidence — kind/platform-local
 Captured: 2026-09-22
+Scope: disposable local Kubernetes runtime; NOT AWS/EKS
 
-Kubernetes:
-  client=v1.36.4 server=v1.36.4
+Cluster:
+  Kubernetes=v1.36.4
+  node Ready=True
+  platform-demo ready replicas=2/2
 
 Argo CD:
-  platform-demo                Healthy   Synced
-  platform-security-policies   Healthy   Synced
-  vertical-pod-autoscaler      Healthy   Synced
-  opencost                     Healthy   Synced
-  cost-controls                Healthy   Synced
-  cost-monitoring-resources    Healthy   Synced
+  cost-controls                      Synced   Healthy
+  cost-monitoring-resources          Synced   Healthy
+  metrics-server                     Synced   Healthy
+  opencost                           Synced   Healthy
+  platform-demo                      Synced   Healthy
+  platform-security-policies         Synced   Healthy
+  reliability-monitoring-resources   Synced   Healthy
+  reliability-resources              Synced   Healthy
+  vertical-pod-autoscaler            Synced   Healthy
 
-Signed-image admission:
-  signed platform image: admitted by server-side dry-run
-  nginx:1.27: denied by validate-platform-demo-images policy
+Kyverno / supply-chain admission:
+  signed immutable project image: ADMITTED by server-side dry-run
+  mutable tag ghcr.io/fadyy2k/platform-demo:latest: DENIED by validate-platform-demo-images
+  unknown digest matching project repository: DENIED by verify-platform-demo-signature
+  namespace Pod Security: restricted profile enforced before admission tests
 
-Prometheus:
-  target=platform-demo health=up
-  platform-demo scrape targets up=2/2
-  rule-group=platform-demo.slo.alerts rules=3
-  rule-group=platform-demo.slo.recording rules=3
-
-Trivy Operator:
-  digest=sha256:5fc1d1e30a9a7ec08830000b794dd5fefdec2026782224f9bb6bf87de89889db critical=0 high=0 medium=0 low=0
-
-Falco:
-  benign probe triggered rule: Read sensitive file untrusted
-  probe namespace=default pod=falco-runtime-probe (temporary pod deleted after test)
+Prometheus / SLOs:
+  active scrape targets=14
+  active scrape targets UP=14
+  platform-demo targets=2
+  platform-demo targets UP=2
+  PlatformDemoFastErrorBudgetBurn: health=ok
+  PlatformDemoSlowErrorBudgetBurn: health=ok; observed firing after synthetic error-burn exercise
+  PlatformDemoTargetDown: health=ok
 
 Resilience game day:
-  deleted one platform-demo pod; Deployment returned to 2/2 available
-  Argo application remained Healthy/Synced after recovery
+  pod-failure scenario: PASS; Deployment recovered
+  error-burn scenario: injected 200 HTTP 503 responses
+  FAIL_MODE removed after exercise
+  post-restore Deployment ready replicas=2/2
+  PodDisruptionBudget minAvailable=1; disruptionsAllowed=1
+  HPA min=2 max=6 current=2 desired=2
+
+Velero recovery drill:
+  backup phase=Completed
+  restore phase=Completed
+  namespace-mapped restore Deployment reached 2/2 ready
+  restored Service, PDB, HPA and VPA objects were present
+  restore proof namespace deleted after validation
+  storage backend for this local drill: local MinIO; NOT AWS object storage
 
 VPA recommendation-only:
-  updateMode=Off targetCPU=25m targetMemory=250Mi
-  currentRequestCPU=50m currentRequestMemory=64Mi
+  updateMode=Off
+  target CPU=25m
+  target memory=250Mi
+  lower bound CPU=25m memory=250Mi
+  upper bound CPU=146m memory=250Mi
 
 OpenCost local allocation:
-  namespace=platform-demo cpuUsageAverage=0.00012 cpuRequestAverage=0.08945 ramUsageBytes=7482777 ramRequestBytes=120051577 totalCost=0.0013 efficiency=0.01009
-  NOTE: local kind/default provider pricing; this is runtime allocation evidence, not an AWS bill.
+  API code=200
+  platform-demo totalCost=0.00043000 cpuCost=0.00037000 ramCost=0.00006000
+  monitoring totalCost=0.00084000 cpuCost=0.00057000 ramCost=0.00027000
+  opencost totalCost=0.00013000 cpuCost=0.00007000 ramCost=0.00005000
+  NOTE: local/default provider pricing model; NOT an AWS bill or AWS pricing evidence.
+
+Trivy Operator:
+  vulnerabilityreports=6
+  configauditreports=51
+  exposedsecretreports=6
+  rbacassessmentreports=23
+  clustercompliancereports=4
+  platform-demo image vulnerability reports at capture time: 0 critical / 0 high / 0 medium / 0 low
+  one platform-demo ReplicaSet configuration report contained 1 medium finding; this is retained as a finding to review rather than hidden.
+
+Falco runtime detection:
+  benign temporary pod triggered rule: Drop and execute new binary in container
+  priority=Critical
+  Kubernetes attribution: namespace=default pod=falco-proof image=docker.io/library/busybox:1.36
+  temporary probe pod deleted after test
+
+Evidence boundary:
+  NOT proven here: GitHub -> AWS OIDC, S3/KMS Terraform state, EKS control plane/managed nodes,
+  AWS load balancer/NAT behavior, AWS-priced OpenCost data, or multi-region failover.

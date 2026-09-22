@@ -43,6 +43,8 @@ Static CI is complemented by a real disposable `kind` runtime on Kubernetes 1.36
 - recovery after a controlled pod-deletion game day;
 - VPA recommendation-only output;
 - OpenCost namespace allocation data against the in-cluster Prometheus service.
+- namespace-mapped Velero backup/restore completed locally with the restored Deployment reaching 2/2;
+- controlled error-burn generated 200 HTTP 503 responses and recovered to 2/2;
 
 See [Local Runtime Evidence](LOCAL_RUNTIME.md) for the transcript, screenshots, scope and limitations.
 
@@ -54,7 +56,7 @@ The repository does **not** currently claim:
 - successful live GitHub OIDC role assumption;
 - live Argo CD reconciliation **in EKS**;
 - external Alertmanager delivery;
-- a completed Velero restore drill;
+- a Velero restore drill backed by AWS/EKS infrastructure;
 - AWS-priced OpenCost allocation data;
 - VPA recommendations from an EKS workload profile;
 - a multi-region failover test.
