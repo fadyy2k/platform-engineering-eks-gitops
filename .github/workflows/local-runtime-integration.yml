@@ -59,8 +59,8 @@ jobs:
           kubectl apply -f security/kyverno/policies/require-image-digest.yaml
           kubectl apply -f security/kyverno/policies/verify-platform-image-signature.yaml
           for _ in $(seq 1 60); do
-            digest_ready=$(kubectl get validatingpolicy validate-platform-demo-images -o jsonpath='{.status.ready}' 2>/dev/null || true)
-            signature_ready=$(kubectl get imagevalidatingpolicy verify-platform-demo-signature -o jsonpath='{.status.ready}' 2>/dev/null || true)
+            digest_ready=$(kubectl get validatingpolicy validate-platform-demo-images -o jsonpath='{.status.conditionStatus.ready}' 2>/dev/null || true)
+            signature_ready=$(kubectl get imagevalidatingpolicy verify-platform-demo-signature -o jsonpath='{.status.conditionStatus.ready}' 2>/dev/null || true)
             [[ "$digest_ready" == "true" && "$signature_ready" == "true" ]] && exit 0
             sleep 2
           done
