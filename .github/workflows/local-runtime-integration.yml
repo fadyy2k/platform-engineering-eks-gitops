@@ -29,9 +29,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
-          chmod +x /usr/local/bin/kind
-          kind version
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSLo "$HOME/.local/bin/kind" https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          chmod +x "$HOME/.local/bin/kind"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/kind" version
 
       - name: Create Kubernetes 1.36 cluster
         run: kind create cluster --name admission-ci --image kindest/node:v1.36.4 --wait 120s
