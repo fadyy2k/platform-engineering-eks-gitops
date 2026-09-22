@@ -2,7 +2,7 @@ TF_ENV ?= dev
 BACKEND_FILE := environments/$(TF_ENV).backend.hcl
 VAR_FILE := environments/$(TF_ENV).tfvars.example
 
-.PHONY: fmt validate bootstrap-init bootstrap-plan bootstrap-apply backend init plan apply k8s-check demo-test reliability-test game-day backup-restore-smoke policy-test operations-test preflight
+.PHONY: fmt validate bootstrap-init bootstrap-plan bootstrap-apply backend init plan apply k8s-check demo-test reliability-test game-day backup-restore-smoke policy-test operations-test preflight local-runtime-verify
 
 fmt:
 	terraform fmt -recursive infra bootstrap
@@ -63,3 +63,6 @@ operations-test:
 
 preflight:
 	./scripts/preflight.sh --local
+
+local-runtime-verify:
+	./scripts/local-runtime-verify.sh

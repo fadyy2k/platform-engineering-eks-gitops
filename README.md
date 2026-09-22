@@ -8,6 +8,7 @@
 [![Reliability CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/reliability.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/reliability.yml)
 [![Cost & Operations CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/operations.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/operations.yml)
 [![Live Readiness CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/live-readiness.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/live-readiness.yml)
+[![Local Runtime Admission CI](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/local-runtime-integration.yml/badge.svg)](https://github.com/fadyy2k/platform-engineering-eks-gitops/actions/workflows/local-runtime-integration.yml)
 
 A platform-engineering reference implementation for **AWS EKS, Terraform, GitHub OIDC, GitOps, supply-chain security, admission policy, runtime detection, observability, SLOs, and reliability engineering**.
 
@@ -176,6 +177,21 @@ Before any AWS activation, the reference now also includes:
 - public contribution/design/live-validation issue templates
 
 See [Live Activation](docs/LIVE_ACTIVATION.md) and [Engineering Evidence](docs/EVIDENCE.md).
+
+## Phase 7: Local Runtime Evidence
+
+The repository now has a non-AWS runtime proof layer on a disposable Kubernetes 1.36 `kind` cluster:
+
+- Argo CD reconciliation is Healthy/Synced for the demo, security-policy and cost-control paths
+- Kyverno admits the signed immutable project image and rejects an untrusted image server-side
+- Prometheus scrapes both demo replicas and loads the SLO alert/recording groups
+- Trivy Operator produced an in-cluster report for the pinned digest
+- Falco detected a benign sensitive-file probe with Kubernetes pod attribution
+- a controlled pod-failure game day recovered the Deployment to 2/2 while Argo remained healthy
+- VPA produced recommendation-only CPU/memory output
+- OpenCost returned live local namespace allocation data from Prometheus
+
+This evidence is intentionally labeled **local runtime**, not EKS/AWS production proof. See [Local Runtime Evidence](docs/LOCAL_RUNTIME.md).
 
 ## Quick Start — Local Validation Only
 

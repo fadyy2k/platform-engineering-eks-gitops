@@ -1,0 +1,42 @@
+Local Runtime Evidence — kind-platform-local
+Captured: 2026-09-22
+
+Kubernetes:
+  client=v1.36.4 server=v1.36.4
+
+Argo CD:
+  platform-demo                Healthy   Synced
+  platform-security-policies   Healthy   Synced
+  vertical-pod-autoscaler      Healthy   Synced
+  opencost                     Healthy   Synced
+  cost-controls                Healthy   Synced
+  cost-monitoring-resources    Healthy   Synced
+
+Signed-image admission:
+  signed platform image: admitted by server-side dry-run
+  nginx:1.27: denied by validate-platform-demo-images policy
+
+Prometheus:
+  target=platform-demo health=up
+  platform-demo scrape targets up=2/2
+  rule-group=platform-demo.slo.alerts rules=3
+  rule-group=platform-demo.slo.recording rules=3
+
+Trivy Operator:
+  digest=sha256:5fc1d1e30a9a7ec08830000b794dd5fefdec2026782224f9bb6bf87de89889db critical=0 high=0 medium=0 low=0
+
+Falco:
+  benign probe triggered rule: Read sensitive file untrusted
+  probe namespace=default pod=falco-runtime-probe (temporary pod deleted after test)
+
+Resilience game day:
+  deleted one platform-demo pod; Deployment returned to 2/2 available
+  Argo application remained Healthy/Synced after recovery
+
+VPA recommendation-only:
+  updateMode=Off targetCPU=25m targetMemory=250Mi
+  currentRequestCPU=50m currentRequestMemory=64Mi
+
+OpenCost local allocation:
+  namespace=platform-demo cpuUsageAverage=0.00012 cpuRequestAverage=0.08945 ramUsageBytes=7482777 ramRequestBytes=120051577 totalCost=0.0013 efficiency=0.01009
+  NOTE: local kind/default provider pricing; this is runtime allocation evidence, not an AWS bill.
