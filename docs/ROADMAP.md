@@ -70,3 +70,15 @@ The repository starts as a safe, reproducible platform baseline and grows by add
 - [x] Capture OpenCost allocation data against in-cluster Prometheus
 - [x] Add a reproducible kind/Kyverno admission workflow to GitHub Actions
 - [ ] Keep AWS-specific OIDC/state/EKS evidence separate until an approved account is available
+
+
+### Phase 7 runtime proof extensions
+
+- [x] Prove mutable-tag denial and unknown-digest signature denial in local admission
+- [x] Execute pod-failure and HTTP error-burn game days locally
+- [x] Capture all-up Prometheus target state and SLO alert behavior
+- [x] Capture OpenCost allocation and VPA recommendation output
+- [x] Capture Falco Kubernetes-attributed runtime event
+- [x] Capture Trivy Operator report inventory and findings
+- [x] Complete namespace-mapped Velero backup/restore against local MinIO
+- [ ] Repeat these runtime proofs in an approved AWS/EKS dev environment when access exists
