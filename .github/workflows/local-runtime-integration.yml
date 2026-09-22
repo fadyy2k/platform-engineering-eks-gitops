@@ -1,0 +1,135 @@
+name: Local Runtime Admission CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/demo/**"
+      - "security/kyverno/**"
+      - ".github/workflows/local-runtime-integration.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/demo/**"
+      - "security/kyverno/**"
+      - ".github/workflows/local-runtime-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-runtime-admission:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install kind
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          chmod +x /usr/local/bin/kind
+          kind version
+
+      - name: Create Kubernetes 1.36 cluster
+        run: kind create cluster --name admission-ci --image kindest/node:v1.36.4 --wait 120s
+
+      - name: Install Kyverno
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm repo add kyverno https://kyverno.github.io/kyverno/
+          helm repo update kyverno
+          helm upgrade --install kyverno kyverno/kyverno \
+            --version 3.9.1 \
+            --namespace kyverno \
+            --create-namespace \
+            -f security/kyverno/values.yaml \
+            --wait --timeout 5m
+
+      - name: Apply namespace and admission policies
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -f apps/demo/namespace.yaml
+          kubectl apply -f security/kyverno/policies/require-image-digest.yaml
+          kubectl apply -f security/kyverno/policies/verify-platform-image-signature.yaml
+          for _ in $(seq 1 60); do
+            digest_ready=$(kubectl get validatingpolicy validate-platform-demo-images -o jsonpath='{.status.ready}' 2>/dev/null || true)
+            signature_ready=$(kubectl get imagevalidatingpolicy verify-platform-demo-signature -o jsonpath='{.status.ready}' 2>/dev/null || true)
+            [[ "$digest_ready" == "true" && "$signature_ready" == "true" ]] && exit 0
+            sleep 2
+          done
+          kubectl get validatingpolicy validate-platform-demo-images -o yaml
+          kubectl get imagevalidatingpolicy verify-platform-demo-signature -o yaml
+          exit 1
+
+      - name: Verify signed image is admitted
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/good.yaml <<'EOF'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: signed-image-admission-probe
+            namespace: platform-demo
+          spec:
+            automountServiceAccountToken: false
+            securityContext:
+              runAsNonRoot: true
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: app
+                image: ghcr.io/fadyy2k/platform-demo@sha256:5fc1d1e30a9a7ec08830000b794dd5fefdec2026782224f9bb6bf87de89889db
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop: ["ALL"]
+                resources:
+                  requests: {cpu: 10m, memory: 16Mi}
+                  limits: {cpu: 100m, memory: 64Mi}
+          EOF
+          kubectl apply --dry-run=server -f /tmp/good.yaml -o name
+
+      - name: Verify untrusted image is denied
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/bad.yaml <<'EOF'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: rejected-image-admission-probe
+            namespace: platform-demo
+          spec:
+            automountServiceAccountToken: false
+            securityContext:
+              runAsNonRoot: true
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: app
+                image: nginx:1.27
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop: ["ALL"]
+                resources:
+                  requests: {cpu: 10m, memory: 16Mi}
+                  limits: {cpu: 100m, memory: 64Mi}
+          EOF
+          set +e
+          output=$(kubectl apply --dry-run=server -f /tmp/bad.yaml 2>&1)
+          rc=$?
+          set -e
+          echo "$output"
+          [[ $rc -ne 0 ]]
+          grep -q 'validate-platform-demo-images' <<<"$output"
+
+      - name: Delete cluster
+        if: always()
+        run: kind delete cluster --name admission-ci

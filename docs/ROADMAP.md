@@ -57,3 +57,16 @@ The repository starts as a safe, reproducible platform baseline and grows by add
 - [ ] Reconcile the platform with Argo CD and capture in-cluster security evidence
 - [ ] Execute the controlled SLO game day and Velero restore drill
 - [ ] Capture real OpenCost/VPA data and evaluate autoscaling from measured load
+
+
+## Phase 7 — Local runtime evidence
+
+- [x] Run Kubernetes 1.36 locally with Argo CD, Kyverno, Prometheus, Trivy and Falco
+- [x] Prove signed-image admission and untrusted-image denial server-side
+- [x] Capture Prometheus SLO scrape/rule evidence
+- [x] Execute a controlled pod-failure recovery game day
+- [x] Capture Trivy Operator and Falco runtime-security evidence
+- [x] Capture VPA recommendation-only output
+- [x] Capture OpenCost allocation data against in-cluster Prometheus
+- [x] Add a reproducible kind/Kyverno admission workflow to GitHub Actions
+- [ ] Keep AWS-specific OIDC/state/EKS evidence separate until an approved account is available

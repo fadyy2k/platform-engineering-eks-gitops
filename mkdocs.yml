@@ -20,6 +20,7 @@ nav:
       - SLOs & Failure Testing: RELIABILITY.md
       - Runbooks: RUNBOOKS.md
   - Cost & Operations: COST_OPERATIONS.md
+  - Local Runtime: LOCAL_RUNTIME.md
   - Live Activation: LIVE_ACTIVATION.md
   - Evidence: EVIDENCE.md
   - Decisions:

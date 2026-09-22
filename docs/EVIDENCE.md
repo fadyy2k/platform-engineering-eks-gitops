@@ -30,17 +30,33 @@ The screenshots below are captures of **public GitHub Actions pages**, not mocke
 - [Cost & operations CI](assets/evidence/cost-operations-ci.png)
 - [Live Readiness CI](assets/evidence/live-readiness-ci.png)
 
+
+## Local runtime evidence
+
+Static CI is complemented by a real disposable `kind` runtime on Kubernetes 1.36.4. The local environment has demonstrated:
+
+- Argo CD Healthy/Synced reconciliation for the demo, policy and cost-control applications;
+- successful admission of the signed immutable demo image and denial of an untrusted image;
+- Prometheus discovery of both demo replicas and loaded SLO rule groups;
+- an in-cluster Trivy Operator report with zero critical/high/medium/low findings for the pinned demo digest at capture time;
+- a benign Falco syscall detection tied to a temporary Kubernetes pod;
+- recovery after a controlled pod-deletion game day;
+- VPA recommendation-only output;
+- OpenCost namespace allocation data against the in-cluster Prometheus service.
+
+See [Local Runtime Evidence](LOCAL_RUNTIME.md) for the transcript, screenshots, scope and limitations.
+
 ## Not yet claimed
 
 The repository does **not** currently claim:
 
 - a provisioned AWS EKS cluster;
 - successful live GitHub OIDC role assumption;
-- live Argo CD reconciliation;
+- live Argo CD reconciliation **in EKS**;
 - external Alertmanager delivery;
 - a completed Velero restore drill;
-- real OpenCost dollar/allocation data;
-- live VPA recommendations;
+- AWS-priced OpenCost allocation data;
+- VPA recommendations from an EKS workload profile;
 - a multi-region failover test.
 
 Those items move to the proven column only after the [Live Activation Runbook](LIVE_ACTIVATION.md) is executed in an approved non-production account and evidence is captured.
