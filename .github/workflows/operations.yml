@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v7
       - name: Render OpenCost
         run: |
           docker run --rm -v "$PWD:/work" -w /work alpine/helm:3.19.0 \
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v7
       - name: Extract cost rules
         run: |
           docker run --rm -v "$PWD:/work" mikefarah/yq:4.53.6 \
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v7
       - name: Validate cost manifests
         run: |
           docker run --rm -v "$PWD:/work" -w /work \
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@v7
       - name: Shellcheck right-sizing report
         run: |
           docker run --rm --entrypoint shellcheck \

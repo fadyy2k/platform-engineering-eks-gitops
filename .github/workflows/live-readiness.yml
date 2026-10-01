@@ -34,7 +34,7 @@ jobs:
   scripts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v7
       - name: Shellcheck activation helpers
         run: |
           docker run --rm --entrypoint shellcheck \
@@ -46,7 +46,7 @@ jobs:
   namespace-boundaries:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v7
       - name: Verify monitoring resources stay in monitoring paths
         shell: bash
         run: |
@@ -86,7 +86,7 @@ jobs:
   eks-baseline:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v7
       - name: Verify current EKS example baseline
         shell: bash
         run: |
